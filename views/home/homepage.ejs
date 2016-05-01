@@ -1,0 +1,224 @@
+<input id='checkuser' type='text' value='<%if(req.session.authenticated){%><%=req.session.user.username%><%}%>'><a href='/logout'>Logout</a>
+<!-- Load external PaperScript and associate it with myCanvas -->
+<script type="text/paperscript" canvas="myCanvas">
+var msg={};
+var myPath={};
+var color='black';
+var width=1;
+var shape=undefined;
+var rectangle=undefined;
+var ellipse=undefined;
+var line=undefined;
+var delArea=undefined;
+var eraser=undefined;
+var from={};
+var to={};
+var myShape={};
+var image_count=1;
+
+window.draw_it=function(draw){
+	console.log(draw);
+	if (draw[0]=="Shape")
+		var frShape=new Shape(draw[1]);
+	else
+		var frPath=new Path(draw[1]);
+}
+
+window.colorChange=function(id){
+	color=id;
+}
+
+window.brushSize=function(x){
+	width=x;
+}
+
+function onMouseDown(event){
+	if(shape){
+		from=new Point(event.point);
+		myShape=new Shape();
+		return;
+	}
+	myPath=new Path;
+	if(eraser)
+		myPath.strokeColor='white';
+	else
+		myPath.strokeColor=color;
+	myPath.strokeWidth=width;
+	myPath.strokeCap='round';
+	myPath.add(event.point);
+}
+
+function onMouseDrag(event){
+	if(shape){
+		if(myShape.remove());
+		to=new Point(event.point);
+		myShape=new Rectangle(from,to);
+		if(line){
+			myShape=new Path(from,to);
+		}
+		else if(rectangle){
+			myShape=new Shape.Rectangle(myShape);
+		}
+		else if(ellipse){
+			myShape=new Shape.Ellipse(myShape);
+		}
+		
+		if(delArea){
+			myShape.strokeColor='white';
+			myShape.fillColor='white';
+		}
+		else{
+			myShape.strokeColor=color;
+			myShape.strokeWidth=width;
+		}
+		myShape.selected=true;
+		return;
+	}
+	myPath.add(event.point);
+	myPath.select=true;
+}
+function onMouseUp(){
+	if(shape){
+		myShape.selected=false;
+		msg=myShape;
+		sendmsg(msg);		
+	}
+	
+	else{
+		myPath.simplify(10);
+		msg=myPath;
+		sendmsg(msg);
+	}
+}
+
+/*myShapes*/
+
+function reset(){
+	delArea=undefined;
+	line=undefined;
+	rectangle=undefined;
+	ellipse=undefined;
+	eraser=undefined;
+}
+
+window.rectangle=function(){
+	reset();
+	shape=1;
+	rectangle=1;
+}
+
+window.ellipse=function(){
+	reset();
+	shape=1;
+	ellipse=1;
+}
+
+window.line=function(){
+	reset();
+	shape=1;
+	line=1;
+}
+
+window.pencil=function(){
+	reset();
+	shape=undefined;
+}
+
+window.eraser=function(){
+	reset();
+	shape=undefined;
+	eraser=1;
+}
+
+window.deleteArea=function(){
+	reset();
+	shape=1;
+	rectangle=1;
+	delArea=1;
+}
+
+//to import an image
+var myCanvas=document.getElementById("myCanvas");
+    function readURL(input) {
+        if (input.files && input.files[0]) {
+            var reader = new FileReader();
+            
+            reader.onload = function (event) {
+				var image=document.createElement('img')
+				image.src=event.target.result;
+				image.id=image_count;
+				document.body.appendChild(image);
+				//add to canvas
+				var raster = new Raster(image.id);
+				// Move the raster to the center of the view
+				raster.position = view.center;
+            }
+            
+            reader.readAsDataURL(input.files[0]);
+			image_count+=1;
+			return;
+        }
+    }
+    
+(document.getElementById("input")).onchange=function(){ //detects when an image is uploaded
+        readURL(this);
+    };
+
+/*
+var touch=new Hammer(myCanvas);
+touch.on('pan',function(ev){
+	console.log(ev.x);
+});
+*/
+</script>
+
+	<div class='panel'>
+		<div class='color-panel'>
+			<span onClick='colorChange(id)' id='red'></span>
+			<span onClick='colorChange(id)' id='green'></span>
+			<span onClick='colorChange(id)' id='blue'></span>
+			<span onClick='colorChange(id)' id='yellow'></span>
+			<span onClick='colorChange(id)' id='turquoise'></span>
+			<span onClick='colorChange(id)' id='springgreen'></span>
+			<span onClick='colorChange(id)' id='plum'></span>
+			<span onClick='colorChange(id)' id='palevioletred'></span>
+			<span onClick='colorChange(id)' id='brown'></span>
+			<span onClick='colorChange(id)' id='black'></span>
+		</div>
+		
+		<div class='actions-panel'>
+			<button onClick='undo()'>Undo</button>
+			<button onClick='redo()'>Redo</button>
+		</div>
+		
+		<div class='image-panel'>
+			<img src='/images/color_picker.png'></img>
+			<label class='fileUpload' >
+				<input  id='input' type="file" ><img id="imgFileUpload" class="classImgFileUpload" src="/images/image.png"></img>
+            </label>
+		</div>
+		
+		<div class='erase-panel'>
+			<button onClick='location.reload()'>Clear</button>
+			<img onClick='eraser()' src='/images/eraser.png'></img>
+			<span onClick='deleteArea()' id='select-area'></span>
+		</div>
+		
+		<div class='shape-panel'>
+			<img onClick='line()' src='/images/diagonal.png'></img>
+			<span onClick='rectangle()' id='rectangle'></span>
+			<span onClick='ellipse()' id='ellipse'></span>
+			<img onClick='pencil()' src='/images/pencil-icon.png'></img>
+		</div>
+		
+		<div class='brush-panel'>
+			<img onClick='brushSize(1)' src='/images/brush.png'></img>
+			<span onClick='brushSize(5)' id='s5'></span>
+			<span onClick='brushSize(10)' id='s10'></span>
+			<span onClick='brushSize(20)' id='s20'></span>
+		</div>
+	</div>
+	
+	<canvas id="myCanvas" resize="true">
+	</canvas>
+
